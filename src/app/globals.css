@@ -1,26 +1,323 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
+/* ─── Tailwind v4 Theme Tokens ──────────────────────────────── */
 @theme inline {
+  /* shadcn bridge variables */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Palette extensions */
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+
+  /* Hard edges — Palantir style: zero radius everywhere */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+
+  /* Fonts */
+  --font-sans: var(--font-inter);
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─── Light Theme (Default) — Palantir-inspired enterprise white ── */
+:root {
+  --radius: 0px;
+
+  /* Clean light surface stack */
+  --background: #f5f6f8;
+  --foreground: #111827;
+  --surface: #ffffff;
+  --elevated: #eef0f4;
+
+  /* Cards: white on gray background */
+  --card: #ffffff;
+  --card-foreground: #111827;
+
+  /* Popover */
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+
+  /* Primary — dark corporate navy blue */
+  --primary: #172554;
+  --primary-foreground: #ffffff;
+
+  /* Secondary */
+  --secondary: #f0f1f4;
+  --secondary-foreground: #111827;
+
+  /* Muted */
+  --muted: #f0f1f4;
+  --muted-foreground: #6b7280;
+
+  /* Accent — hover/active state */
+  --accent: #eef0f4;
+  --accent-foreground: #111827;
+
+  /* Destructive */
+  --destructive: #dc2626;
+
+  /* Borders — visible card edges, Palantir-style */
+  --border: #d9dde4;
+  --input: #d1d5db;
+  --ring: #172554;
+
+  /* Green/Red for financial data */
+  --up: #16a34a;
+  --down: #dc2626;
+
+  /* Charts */
+  --chart-1: #172554;
+  --chart-2: #16a34a;
+  --chart-3: #d97706;
+  --chart-4: #7c3aed;
+  --chart-5: #dc2626;
+
+  /* Sidebar — white panel */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #172554;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f1f4;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #d9dde4;
+  --sidebar-ring: #172554;
+}
+
+/* ─── Dark Theme (future toggle) ─────────────────────────────── */
+.dark {
+  --background: #0c0d11;
+  --foreground: #d1d4dc;
+  --surface: #131722;
+  --elevated: #1e222d;
+
+  --card: #131722;
+  --card-foreground: #d1d4dc;
+
+  --popover: #1a1e2a;
+  --popover-foreground: #d1d4dc;
+
+  --primary: #2962ff;
+  --primary-foreground: #ffffff;
+
+  --secondary: #1e222d;
+  --secondary-foreground: #d1d4dc;
+
+  --muted: #1e222d;
+  --muted-foreground: #787b86;
+
+  --accent: #1e222d;
+  --accent-foreground: #d1d4dc;
+
+  --destructive: #ef5350;
+
+  --border: #1e222d;
+  --input: #2a2e39;
+  --ring: #2962ff;
+
+  --up: #26a69a;
+  --down: #ef5350;
+
+  --chart-1: #2962ff;
+  --chart-2: #26a69a;
+  --chart-3: #f7a21b;
+  --chart-4: #ab47bc;
+  --chart-5: #ef5350;
+
+  --sidebar: #08090c;
+  --sidebar-foreground: #d1d4dc;
+  --sidebar-primary: #2962ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #131722;
+  --sidebar-accent-foreground: #d1d4dc;
+  --sidebar-border: #1e222d;
+  --sidebar-ring: #2962ff;
+}
+
+/* ─── Base Styles ────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Financial number styling — tabular nums for aligned columns */
+  .font-financial {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.01em;
   }
 }
 
-body {
-  background: var(--background);
+/* ─── Prose styling for AI research output ────────────────────── */
+.prose-financial {
+  line-height: 1.65;
+}
+.prose-financial h1,
+.prose-financial h2,
+.prose-financial h3 {
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 600;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+}
+.prose-financial h3 { font-size: 14px; }
+.prose-financial h2 { font-size: 15px; }
+.prose-financial h1 { font-size: 16px; }
+.prose-financial p { margin-bottom: 0.75em; }
+.prose-financial ul,
+.prose-financial ol {
+  padding-left: 1.25em;
+  margin-bottom: 0.75em;
+}
+.prose-financial li { margin-bottom: 0.25em; }
+.prose-financial strong { color: var(--foreground); font-weight: 600; }
+.prose-financial code {
+  background: var(--accent);
+  padding: 0.15em 0.35em;
+  font-size: 0.9em;
+  font-family: var(--font-mono);
+}
+.prose-financial table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+  font-variant-numeric: tabular-nums;
+}
+.prose-financial th,
+.prose-financial td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 12px;
+}
+.prose-financial th {
+  background: var(--accent);
+  font-weight: 600;
+  color: var(--foreground);
+}
+.prose-financial a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s;
+}
+.prose-financial a:hover {
+  opacity: 0.75;
+}
+.prose-financial blockquote {
+  border-left: 2px solid var(--primary);
+  padding-left: 1em;
+  color: var(--muted-foreground);
+  margin-bottom: 0.75em;
+}
+
+/* ─── Custom Scrollbar (thin, subtle) ─────────────────────────── */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}
+
+/* ─── Utility Animations ─────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.3s ease-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #eef0f4 25%,
+    #f8f9fa 50%,
+    #eef0f4 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
