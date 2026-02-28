@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as fmp from "@/lib/api/fmp";
+import {
+  getCompanyProfile,
+  getKeyMetrics,
+  getKeyMetricsAlt,
+} from "@/lib/api/provider-chain";
 
 export async function GET(request: NextRequest) {
   const symbol = request.nextUrl.searchParams.get("symbol");
@@ -17,23 +21,25 @@ export async function GET(request: NextRequest) {
   };
 
   try {
+    const sym = symbol.toUpperCase();
     const [profileRes, ratiosRes, metricsRes] = await Promise.allSettled([
-      fmp.getProfile(symbol.toUpperCase()),
-      fmp.getKeyMetrics(symbol.toUpperCase()),       // ratios-ttm (PE, PB, PS, dividendYield)
-      fmp.getKeyMetricsAlt(symbol.toUpperCase()),     // key-metrics-ttm (ROE, ROIC, EV/EBITDA)
+      getCompanyProfile(sym),
+      getKeyMetrics(sym),       // ratios-ttm (PE, PB, PS, dividendYield)
+      getKeyMetricsAlt(sym),    // key-metrics-ttm (ROE, ROIC, EV/EBITDA)
     ]);
 
+    // Cached wrappers return the first element or null directly
     const p =
-      profileRes.status === "fulfilled" ? profileRes.value[0] ?? null : null;
+      profileRes.status === "fulfilled" ? profileRes.value : null;
 
     // Merge both metrics endpoints into one object
     const ratios: Record<string, unknown> =
-      ratiosRes.status === "fulfilled" && ratiosRes.value[0]
-        ? { ...ratiosRes.value[0] }
+      ratiosRes.status === "fulfilled" && ratiosRes.value
+        ? { ...ratiosRes.value }
         : {};
     const km: Record<string, unknown> =
-      metricsRes.status === "fulfilled" && metricsRes.value[0]
-        ? { ...metricsRes.value[0] }
+      metricsRes.status === "fulfilled" && metricsRes.value
+        ? { ...metricsRes.value }
         : {};
     const m = { ...km, ...ratios };
     const hasMetrics = Object.keys(m).length > 1;

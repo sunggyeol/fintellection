@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn, formatPercent } from "@/lib/utils";
 import type { MarketMover } from "@/types/financial";
@@ -101,7 +101,6 @@ export function MarketHeatmap() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [stocks, setStocks] = useState<MarketMover[]>([]);
-  const [cells, setCells] = useState<TreemapCell[]>([]);
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [loading, setLoading] = useState(true);
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
@@ -128,8 +127,8 @@ export function MarketHeatmap() {
   }, []);
 
   // Compute treemap layout
-  const computeLayout = useCallback(() => {
-    if (!stocks.length || dims.w === 0) return;
+  const cells = useMemo(() => {
+    if (!stocks.length || dims.w === 0) return [] as TreemapCell[];
 
     const weighted = stocks
       .map((s) => ({ ...s, weight: WEIGHTS[s.symbol] ?? 0.5 }))
@@ -148,12 +147,8 @@ export function MarketHeatmap() {
       h: c.h - gap,
     }));
 
-    setCells(gapped);
+    return gapped;
   }, [stocks, dims]);
-
-  useEffect(() => {
-    computeLayout();
-  }, [computeLayout]);
 
   if (loading) {
     return (

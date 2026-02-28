@@ -26,6 +26,7 @@ export function ResearchInput({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
   }, [value]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -37,15 +38,16 @@ export function ResearchInput({
 
   return (
     <div className="border-t border-border bg-surface p-4">
-      <div className="mx-auto flex max-w-3xl items-end gap-2">
+      <div className="mx-auto flex max-w-3xl min-w-0 items-end gap-2">
         <textarea
           ref={textareaRef}
+          suppressHydrationWarning
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask a financial research question..."
           rows={1}
-          className="flex-1 resize-none border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+          className="min-w-0 flex-1 resize-none overflow-hidden border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
         />
         {isStreaming ? (
           <button

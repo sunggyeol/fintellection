@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -27,7 +27,7 @@ export default function WatchlistsPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const symbols = watchlist?.symbols ?? [];
+  const symbols = useMemo(() => watchlist?.symbols ?? [], [watchlist?.symbols]);
 
   // Fetch quotes for watchlist symbols (single batch request)
   useEffect(() => {
@@ -77,10 +77,10 @@ export default function WatchlistsPage() {
   }, [showSearch]);
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-lg font-semibold text-foreground">Watchlists</h1>
           <p className="text-sm text-muted-foreground">
             {symbols.length} stock{symbols.length !== 1 ? "s" : ""} tracked
@@ -88,7 +88,7 @@ export default function WatchlistsPage() {
         </div>
         <button
           onClick={() => setShowSearch(!showSearch)}
-          className="flex items-center gap-1.5 border border-border px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-elevated"
+          className="flex shrink-0 items-center gap-1.5 border border-border px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-elevated"
         >
           <Plus className="size-3" />
           Add Stock
@@ -183,56 +183,104 @@ export default function WatchlistsPage() {
         </div>
       ) : (
         <div className="border border-border bg-card">
-          {/* Table header */}
-          <div className="flex items-center border-b border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
-            <span className="w-20">Symbol</span>
-            <span className="flex-1">Name</span>
-            <span className="w-24 text-right">Price</span>
-            <span className="w-20 text-right">Change</span>
-            <span className="w-8" />
+          {/* Mobile layout */}
+          <div className="md:hidden">
+            {symbols.map((symbol) => {
+              const quote = quotes.get(symbol);
+              const colorClass = getPriceColorClass(quote?.changePct ?? 0);
+
+              return (
+                <div
+                  key={symbol}
+                  className="group flex items-stretch border-b border-border last:border-b-0"
+                >
+                  <Link
+                    href={`/stock/${symbol}`}
+                    className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-elevated"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-medium text-foreground">
+                        {symbol}
+                      </p>
+                      <p className="truncate text-[13px] text-muted-foreground">
+                        {quote?.name ?? "—"}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className="font-financial text-[15px] text-foreground">
+                        {quote ? formatPrice(quote.price) : "—"}
+                      </p>
+                      <p className={cn("font-financial text-[13px]", colorClass)}>
+                        {quote ? formatPercent(quote.changePct) : "—"}
+                      </p>
+                    </div>
+                  </Link>
+
+                  <button
+                    onClick={() => remove(symbol)}
+                    className="flex shrink-0 items-center px-3 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Rows */}
-          {symbols.map((symbol) => {
-            const quote = quotes.get(symbol);
-            const colorClass = getPriceColorClass(quote?.changePct ?? 0);
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            {/* Table header */}
+            <div className="flex items-center border-b border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
+              <span className="w-20">Symbol</span>
+              <span className="flex-1">Name</span>
+              <span className="w-24 text-right">Price</span>
+              <span className="w-20 text-right">Change</span>
+              <span className="w-8" />
+            </div>
 
-            return (
-              <div
-                key={symbol}
-                className="group flex items-center border-b border-border last:border-b-0"
-              >
-                <Link
-                  href={`/stock/${symbol}`}
-                  className="flex flex-1 items-center px-3 py-2 transition-colors hover:bg-elevated"
+            {/* Rows */}
+            {symbols.map((symbol) => {
+              const quote = quotes.get(symbol);
+              const colorClass = getPriceColorClass(quote?.changePct ?? 0);
+
+              return (
+                <div
+                  key={symbol}
+                  className="group flex items-center border-b border-border last:border-b-0"
                 >
-                  <span className="w-20 shrink-0 text-[13px] font-medium text-foreground">
-                    {symbol}
-                  </span>
-                  <span className="flex-1 truncate text-[13px] text-muted-foreground">
-                    {quote?.name ?? "—"}
-                  </span>
-                  <span className="w-24 text-right font-financial text-[13px] text-foreground">
-                    {quote ? formatPrice(quote.price) : "—"}
-                  </span>
-                  <span
-                    className={cn(
-                      "w-20 text-right font-financial text-[13px]",
-                      colorClass
-                    )}
+                  <Link
+                    href={`/stock/${symbol}`}
+                    className="flex flex-1 items-center px-3 py-2 transition-colors hover:bg-elevated"
                   >
-                    {quote ? formatPercent(quote.changePct) : "—"}
-                  </span>
-                </Link>
-                <button
-                  onClick={() => remove(symbol)}
-                  className="mr-2 p-1 opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
-                >
-                  <X className="size-3 text-muted-foreground" />
-                </button>
-              </div>
-            );
-          })}
+                    <span className="w-20 shrink-0 text-[13px] font-medium text-foreground">
+                      {symbol}
+                    </span>
+                    <span className="flex-1 truncate text-[13px] text-muted-foreground">
+                      {quote?.name ?? "—"}
+                    </span>
+                    <span className="w-24 text-right font-financial text-[13px] text-foreground">
+                      {quote ? formatPrice(quote.price) : "—"}
+                    </span>
+                    <span
+                      className={cn(
+                        "w-20 text-right font-financial text-[13px]",
+                        colorClass
+                      )}
+                    >
+                      {quote ? formatPercent(quote.changePct) : "—"}
+                    </span>
+                  </Link>
+                  <button
+                    onClick={() => remove(symbol)}
+                    className="mr-2 p-1 opacity-100 transition-opacity hover:bg-destructive/10 sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <X className="size-3 text-muted-foreground" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

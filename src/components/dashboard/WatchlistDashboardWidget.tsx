@@ -47,9 +47,12 @@ export function WatchlistDashboardWidget() {
             {watchlist?.name ?? "Watchlist"}
           </span>
         </div>
-        <span className="text-[11px] text-muted-foreground">
-          {symbols.length} stocks
-        </span>
+        <Link
+          href="/dashboard/watchlists"
+          className="text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {symbols.length} stocks &rsaquo;
+        </Link>
       </div>
 
       {symbols.length === 0 ? (
@@ -67,26 +70,26 @@ export function WatchlistDashboardWidget() {
             const colorClass = getPriceColorClass(quote?.changePct ?? 0);
 
             return (
-              <div key={symbol} className="group flex items-center">
+              <div key={symbol} className="group flex min-w-0 items-center">
                 <Link
                   href={`/stock/${symbol}`}
-                  className="flex flex-1 items-center gap-3 px-3 py-1.5 transition-colors hover:bg-elevated"
+                  className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 transition-colors hover:bg-elevated sm:gap-3"
                 >
-                  <span className="w-14 shrink-0 text-[13px] font-medium text-foreground">
+                  <span className="w-12 shrink-0 text-[12px] font-medium text-foreground sm:w-14 sm:text-[13px]">
                     {symbol}
                   </span>
                   <span className="flex-1" />
                   {quote ? (
                     <>
-                      <span className="font-financial text-[13px] text-foreground">
+                      <span className="font-financial text-[12px] text-foreground sm:text-[13px]">
                         {formatPrice(quote.price)}
-                        <span className="ml-0.5 text-[10px] text-muted-foreground">
+                        <span className="ml-0.5 hidden text-[10px] text-muted-foreground sm:inline">
                           USD
                         </span>
                       </span>
                       <span
                         className={cn(
-                          "ml-3 w-14 text-right font-financial text-[13px]",
+                          "ml-2 w-12 text-right font-financial text-[12px] sm:ml-3 sm:w-14 sm:text-[13px]",
                           colorClass
                         )}
                       >
@@ -99,7 +102,7 @@ export function WatchlistDashboardWidget() {
                 </Link>
                 <button
                   onClick={() => remove(symbol)}
-                  className="mr-1.5 p-0.5 opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
+                  className="mr-1.5 p-0.5 opacity-100 transition-opacity hover:bg-destructive/10 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <X className="size-3 text-muted-foreground" />
                 </button>

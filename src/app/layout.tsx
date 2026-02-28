@@ -8,6 +8,8 @@ import { TopBar } from "@/components/layout/TopBar";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { GlobalSearchProvider } from "@/hooks/useGlobalSearch";
+import { AuthProvider } from "@/hooks/useAuth";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -23,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fintellection — AI-Powered Financial Intelligence",
+  title: "Fintellection",
   description:
     "Institutional-grade financial research powered by AI. Interactive charts, real-time data, and agentic analysis.",
   icons: { icon: "/icon.svg" },
@@ -37,27 +39,29 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} overflow-x-hidden font-sans antialiased`}
       >
         <NuqsAdapter>
           <TooltipProvider delayDuration={300}>
-            <GlobalSearchProvider>
-              <div className="flex h-screen overflow-hidden">
-                {/* Sidebar — desktop only, hidden on mobile */}
-                <Sidebar />
+            <AuthProvider>
+              <GlobalSearchProvider>
+                <div className="app-shell-height flex min-w-0 w-full overflow-hidden">
+                  {/* Sidebar — desktop only, hidden on mobile */}
+                  <Sidebar />
 
-                {/* Main content area */}
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <TopBar />
-                  <main className="flex-1 overflow-y-auto pb-14 lg:pb-0">
-                    {children}
-                  </main>
-                  <MobileNav />
+                  {/* Main content area */}
+                  <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                    <TopBar />
+                    <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+                      {children}
+                    </main>
+                    <MobileNav />
+                  </div>
                 </div>
-              </div>
 
-              <GlobalSearch />
-            </GlobalSearchProvider>
+                <GlobalSearch />
+              </GlobalSearchProvider>
+            </AuthProvider>
             <Toaster
               position="bottom-right"
               toastOptions={{
@@ -70,6 +74,7 @@ export default function RootLayout({
             />
           </TooltipProvider>
         </NuqsAdapter>
+        <Analytics />
       </body>
     </html>
   );

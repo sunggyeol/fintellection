@@ -1,7 +1,14 @@
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
-import { getStockQuote, getStockNews } from "@/lib/api/provider-chain";
-import * as fmp from "@/lib/api/fmp";
+import {
+  getStockQuote,
+  getStockNews,
+  getCompanyProfile,
+  getKeyMetrics,
+  getFredSeries,
+  getFredSeriesInfo,
+} from "@/lib/api/provider-chain";
+import { cached, TTL } from "@/lib/api/cache";
 
 export const agentTools: ToolSet = {
   financial_data: tool({
@@ -24,16 +31,16 @@ export const agentTools: ToolSet = {
           }
           case "fundamentals":
           case "metrics": {
-            const metrics = await fmp.getKeyMetrics(symbol);
-            return { success: true, data: metrics[0] ?? null, dataDate: new Date().toISOString() };
+            const metrics = await getKeyMetrics(symbol);
+            return { success: true, data: metrics, dataDate: new Date().toISOString() };
           }
           case "news": {
             const news = await getStockNews(symbol);
             return { success: true, data: news.slice(0, 5), dataDate: new Date().toISOString() };
           }
           case "profile": {
-            const profile = await fmp.getProfile(symbol);
-            return { success: true, data: profile[0] ?? null, dataDate: new Date().toISOString() };
+            const profile = await getCompanyProfile(symbol);
+            return { success: true, data: profile, dataDate: new Date().toISOString() };
           }
           default:
             return { success: false, error: "Unknown data type" };
@@ -57,32 +64,35 @@ export const agentTools: ToolSet = {
         return { success: false, error: "Web search not configured" };
       }
 
-      try {
-        const res = await fetch("https://google.serper.dev/search", {
-          method: "POST",
-          headers: {
-            "X-API-KEY": apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ q: query, num: numResults }),
-        });
+      const cacheKey = `serper:${query.toLowerCase().trim()}:${numResults}`;
+      return cached(cacheKey, TTL.SERPER, async () => {
+        try {
+          const res = await fetch("https://google.serper.dev/search", {
+            method: "POST",
+            headers: {
+              "X-API-KEY": apiKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ q: query, num: numResults }),
+          });
 
-        if (!res.ok) throw new Error(`Serper API error: ${res.status}`);
-        const data = await res.json();
+          if (!res.ok) throw new Error(`Serper API error: ${res.status}`);
+          const data = await res.json();
 
-        const results = (data.organic ?? []).slice(0, numResults).map(
-          (r: { title: string; link: string; snippet: string; date?: string }) => ({
-            title: r.title,
-            url: r.link,
-            snippet: r.snippet,
-            date: r.date ?? null,
-          })
-        );
+          const results = (data.organic ?? []).slice(0, numResults).map(
+            (r: { title: string; link: string; snippet: string; date?: string }) => ({
+              title: r.title,
+              url: r.link,
+              snippet: r.snippet,
+              date: r.date ?? null,
+            })
+          );
 
-        return { success: true, results, searchDate: new Date().toISOString() };
-      } catch (e) {
-        return { success: false, error: String(e) };
-      }
+          return { success: true, results, searchDate: new Date().toISOString() };
+        } catch (e) {
+          return { success: false as const, error: String(e) };
+        }
+      });
     },
   }),
 
@@ -192,17 +202,88 @@ export const agentTools: ToolSet = {
         .describe("SEC form types to search"),
     }),
     execute: async ({ query, formTypes }) => {
+      const cacheKey = `sec:${query.toLowerCase()}:${formTypes.join(",")}`;
+      return cached(cacheKey, TTL.SEC_FILING, async () => {
+        try {
+          const { searchFilings } = await import("@/lib/api/sec-edgar");
+          const result = await searchFilings(query, formTypes, 5);
+          const filings = result.hits.hits.map((hit) => ({
+            id: hit._id,
+            formType: hit._source.form_type ?? "Unknown",
+            entityName: hit._source.entity_name ?? "Unknown",
+            fileDate: hit._source.file_date ?? hit._source.display_date_filed ?? "Unknown",
+            description: hit._source.file_description ?? "",
+          }));
+          return { success: true, filings, searchDate: new Date().toISOString() };
+        } catch (e) {
+          return { success: false as const, error: String(e) };
+        }
+      });
+    },
+  }),
+
+  fred_data: tool({
+    description:
+      "Fetch macroeconomic data from the Federal Reserve (FRED). Covers interest rates, inflation, GDP, unemployment, yield curve, and volatility. Use for macro analysis and economic context.",
+    inputSchema: z.object({
+      seriesId: z
+        .string()
+        .describe(
+          "FRED series ID. Common: FEDFUNDS (fed funds rate), CPIAUCSL (CPI), GDP, UNRATE (unemployment), DGS10 (10yr yield), DGS2 (2yr yield), T10Y2Y (yield curve), VIXCLS (VIX)"
+        ),
+      observationStart: z
+        .string()
+        .optional()
+        .describe("Start date YYYY-MM-DD. Defaults to 1 year ago."),
+      observationEnd: z
+        .string()
+        .optional()
+        .describe("End date YYYY-MM-DD. Defaults to today."),
+      frequency: z
+        .enum(["d", "w", "bw", "m", "q", "sa", "a"])
+        .optional()
+        .describe("Data frequency: d=daily, w=weekly, m=monthly, q=quarterly, a=annual"),
+      limit: z
+        .number()
+        .optional()
+        .describe("Max observations to return. Default 100."),
+    }),
+    execute: async ({ seriesId, observationStart, observationEnd, frequency, limit }) => {
       try {
-        const { searchFilings } = await import("@/lib/api/sec-edgar");
-        const result = await searchFilings(query, formTypes, 5);
-        const filings = result.hits.hits.map((hit) => ({
-          id: hit._id,
-          formType: hit._source.form_type ?? "Unknown",
-          entityName: hit._source.entity_name ?? "Unknown",
-          fileDate: hit._source.file_date ?? hit._source.display_date_filed ?? "Unknown",
-          description: hit._source.file_description ?? "",
-        }));
-        return { success: true, filings, searchDate: new Date().toISOString() };
+        const defaultStart = new Date(Date.now() - 365 * 86_400_000)
+          .toISOString()
+          .split("T")[0];
+
+        const [observations, info] = await Promise.allSettled([
+          getFredSeries(seriesId.toUpperCase(), {
+            observationStart: observationStart ?? defaultStart,
+            observationEnd,
+            frequency,
+            limit: limit ?? 100,
+            sortOrder: "desc",
+          }),
+          getFredSeriesInfo(seriesId.toUpperCase()),
+        ]);
+
+        const data = observations.status === "fulfilled" ? observations.value : null;
+        const meta = info.status === "fulfilled" ? info.value : null;
+
+        if (!data) {
+          return { success: false, error: `No data for FRED series ${seriesId}` };
+        }
+
+        return {
+          success: true,
+          series: {
+            id: seriesId.toUpperCase(),
+            title: meta?.title ?? seriesId,
+            units: meta?.units ?? "Unknown",
+            frequency: meta?.frequency ?? "Unknown",
+            lastUpdated: meta?.last_updated ?? null,
+          },
+          observations: data.filter((d) => d.value !== null).slice(0, limit ?? 100),
+          dataDate: new Date().toISOString(),
+        };
       } catch (e) {
         return { success: false, error: String(e) };
       }

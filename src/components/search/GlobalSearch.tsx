@@ -22,7 +22,7 @@ export function GlobalSearch() {
   const watchedSymbols = watchlist?.symbols ?? [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-3 pt-[18vh] sm:px-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70"

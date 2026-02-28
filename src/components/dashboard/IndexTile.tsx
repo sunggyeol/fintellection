@@ -11,7 +11,7 @@ interface IndexTileProps {
 
 export function IndexTile({ data }: IndexTileProps) {
   const colorClass = getPriceColorClass(data.changePct);
-  const href = data.etf ? `/stock/${data.etf}` : undefined;
+  const href = `/stock/${encodeURIComponent(data.symbol)}`;
 
   const content = (
     <>
@@ -41,20 +41,12 @@ export function IndexTile({ data }: IndexTileProps) {
     </>
   );
 
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="block border border-border bg-card px-3 py-2.5 transition-colors hover:bg-elevated"
-      >
-        {content}
-      </Link>
-    );
-  }
-
   return (
-    <div className="border border-border bg-card px-3 py-2.5">
+    <Link
+      href={href}
+      className="block border border-border bg-card px-3 py-2.5 transition-colors hover:bg-elevated"
+    >
       {content}
-    </div>
+    </Link>
   );
 }

@@ -43,6 +43,8 @@ export function StockDetailClient({ symbol }: StockDetailClientProps) {
   const [chartType] = useState<ChartType>("candlestick");
   const [loading, setLoading] = useState(true);
 
+  const isIndex = symbol.startsWith("^");
+
   // Fetch quote
   useEffect(() => {
     fetch(`/api/quote?symbol=${symbol}`)
@@ -108,17 +110,21 @@ export function StockDetailClient({ symbol }: StockDetailClientProps) {
             )}
           </div>
 
-          {/* Tabs: Fundamentals + News */}
-          <Tabs defaultValue="fundamentals" className="w-full">
+          {/* Tabs: Fundamentals (stocks only) + News */}
+          <Tabs defaultValue={isIndex ? "news" : "fundamentals"} className="w-full">
             <TabsList className="mb-4 bg-surface">
-              <TabsTrigger value="fundamentals">Fundamentals</TabsTrigger>
+              {!isIndex && (
+                <TabsTrigger value="fundamentals">Fundamentals</TabsTrigger>
+              )}
               <TabsTrigger value="news">News</TabsTrigger>
             </TabsList>
-            <TabsContent value="fundamentals">
-              <div className="border border-border bg-card p-4">
-                <FundamentalsTab symbol={symbol} />
-              </div>
-            </TabsContent>
+            {!isIndex && (
+              <TabsContent value="fundamentals">
+                <div className="border border-border bg-card p-4">
+                  <FundamentalsTab symbol={symbol} />
+                </div>
+              </TabsContent>
+            )}
             <TabsContent value="news">
               <div className="border border-border bg-card p-4">
                 <NewsTab symbol={symbol} />

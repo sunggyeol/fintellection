@@ -125,6 +125,16 @@
   --sidebar-ring: #172554;
 }
 
+.app-shell-height {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.mobile-nav-safe {
+  height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ─── Dark Theme (future toggle) ─────────────────────────────── */
 .dark {
   --background: #0c0d11;
@@ -181,6 +191,13 @@
     @apply border-border outline-ring/50;
   }
 
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "tnum" 1, "ss01" 1;
@@ -201,6 +218,7 @@
 /* ─── Prose styling for AI research output ────────────────────── */
 .prose-financial {
   line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 .prose-financial h1,
 .prose-financial h2,
@@ -250,6 +268,7 @@
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: opacity 0.15s;
+  overflow-wrap: anywhere;
 }
 .prose-financial a:hover {
   opacity: 0.75;
@@ -278,6 +297,14 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #2a2e39;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #363a45;
   }
 }
 
@@ -320,4 +347,43 @@
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #1e222d 25%,
+    #262a36 50%,
+    #1e222d 75%
+  );
+  background-size: 200% 100%;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* ─── Ticker scroll (marquee) ──────────────────────────────── */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker-scroll 40s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }

@@ -5,18 +5,14 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   BrainCircuit,
-  ListChecks,
-  Settings,
-  CandlestickChart,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/research", label: "Analyst", icon: BrainCircuit },
-  { href: "/watchlists", label: "Watchlists", icon: ListChecks },
-  { href: "/trader", label: "Trader", icon: CandlestickChart },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/research", label: "Research Analyst", icon: BrainCircuit },
+  { href: "/trader", label: "Agentic Trader", icon: Bot },
 ] as const;
 
 export function SidebarNav() {

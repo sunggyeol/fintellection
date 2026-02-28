@@ -189,7 +189,7 @@ export async function getKeyMetricsAlt(symbol: string) {
 
 export async function getGainers() {
   const res = await fetchWithRetry(
-    `${BASE_URL}/gainers?apikey=${API_KEY()}`
+    `${BASE_URL}/biggest-gainers?apikey=${API_KEY()}`
   );
   const data = await res.json();
   return GainersLosersSchema.parse(data);
@@ -197,7 +197,7 @@ export async function getGainers() {
 
 export async function getLosers() {
   const res = await fetchWithRetry(
-    `${BASE_URL}/losers?apikey=${API_KEY()}`
+    `${BASE_URL}/biggest-losers?apikey=${API_KEY()}`
   );
   const data = await res.json();
   return GainersLosersSchema.parse(data);
@@ -205,7 +205,7 @@ export async function getLosers() {
 
 export async function getMostActive() {
   const res = await fetchWithRetry(
-    `${BASE_URL}/actives?apikey=${API_KEY()}`
+    `${BASE_URL}/most-actives?apikey=${API_KEY()}`
   );
   const data = await res.json();
   return GainersLosersSchema.parse(data);
@@ -217,6 +217,93 @@ export async function getStockNews(symbol: string, limit = 10) {
   );
   const data = await res.json();
   return NewsSchema.parse(data);
+}
+
+const FmpArticlesSchema = z.array(
+  z.object({
+    title: z.string(),
+    date: z.string(),
+    content: z.string(),
+    tickers: z.string().optional(),
+    image: z.string().nullable().optional(),
+    link: z.string().optional(),
+    author: z.string().optional(),
+    site: z.string().optional(),
+  }).passthrough()
+);
+
+// ── New Schemas for Dashboard ────────────────────────────────
+
+const SectorPerformanceSchema = z.array(
+  z.object({
+    sector: z.string(),
+    changesPercentage: z.string(),
+  })
+);
+
+const EarningsCalendarSchema = z.array(
+  z.object({
+    symbol: z.string(),
+    date: z.string(),
+    eps: z.number().nullable().optional(),
+    epsEstimated: z.number().nullable().optional(),
+    revenue: z.number().nullable().optional(),
+    revenueEstimated: z.number().nullable().optional(),
+    time: z.string().optional(),
+  }).passthrough()
+);
+
+const NasdaqConstituentSchema = z.array(
+  z.object({
+    symbol: z.string(),
+    name: z.string(),
+    sector: z.string().nullable().optional(),
+    subSector: z.string().nullable().optional(),
+  }).passthrough()
+);
+
+// ── New API Functions for Dashboard ─────────────────────────
+
+export async function getBatchQuotes(symbols: string[]) {
+  const symbolStr = symbols.join(",");
+  const res = await fetchWithRetry(
+    `${BASE_URL}/quote?symbol=${encodeURIComponent(symbolStr)}&apikey=${API_KEY()}`
+  );
+  const data = await res.json();
+  return QuoteSchema.parse(data);
+}
+
+export async function getSectorPerformance() {
+  const res = await fetchWithRetry(
+    `${BASE_URL}/sectors-performance?apikey=${API_KEY()}`
+  );
+  const data = await res.json();
+  return SectorPerformanceSchema.parse(data);
+}
+
+export async function getEarningsCalendar(from: string, to: string) {
+  const res = await fetchWithRetry(
+    `${BASE_URL}/earning_calendar?from=${from}&to=${to}&apikey=${API_KEY()}`
+  );
+  const data = await res.json();
+  return EarningsCalendarSchema.parse(data);
+}
+
+export async function getNasdaqConstituents() {
+  const res = await fetchWithRetry(
+    `${BASE_URL}/nasdaq_constituent?apikey=${API_KEY()}`
+  );
+  const data = await res.json();
+  return NasdaqConstituentSchema.parse(data);
+}
+
+export async function getMarketNews(limit = 20) {
+  // /stable/news returns empty on Starter; use fmp-articles instead
+  const res = await fetchWithRetry(
+    `${BASE_URL}/fmp-articles?limit=${limit}&apikey=${API_KEY()}`
+  );
+  const data = await res.json();
+  return FmpArticlesSchema.parse(data);
 }
 
 export type FMPQuote = z.infer<typeof QuoteSchema>[number];

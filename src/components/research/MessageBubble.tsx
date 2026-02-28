@@ -14,18 +14,31 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
-    <div className={isUser ? "flex justify-end" : ""}>
+    <div className={isUser ? "flex justify-end" : "min-w-0"}>
       <div
         className={
           isUser
-            ? "max-w-[80%] bg-primary px-4 py-2.5 text-sm text-primary-foreground"
-            : "max-w-full text-sm text-foreground"
+            ? "max-w-[85%] overflow-hidden break-words bg-primary px-4 py-2.5 text-sm text-primary-foreground"
+            : "min-w-0 max-w-full overflow-hidden break-words text-sm text-foreground"
         }
       >
         {message.parts.map((part, i) => {
           if (isTextUIPart(part)) {
+            if (!part.text.trim()) return null;
+
+            if (isUser) {
+              return (
+                <p
+                  key={i}
+                  className="min-w-0 whitespace-pre-wrap break-words leading-tight"
+                >
+                  {part.text}
+                </p>
+              );
+            }
+
             return (
-              <div key={i} className="prose-financial">
+              <div key={i} className="prose-financial min-w-0 break-words">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -45,12 +58,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           if (isToolUIPart(part)) {
             const toolName = getToolName(part);
             const input = ("input" in part ? part.input : {}) as Record<string, unknown>;
+            const output = "output" in part ? part.output : undefined;
             return (
               <ToolCallIndicator
                 key={i}
                 toolName={toolName}
                 state={part.state}
                 args={input}
+                output={output}
               />
             );
           }

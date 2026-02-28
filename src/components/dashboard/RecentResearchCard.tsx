@@ -3,21 +3,26 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageSquare, Clock } from "lucide-react";
-import { getRecentSessions } from "@/lib/db";
+import { actorFromAuth, getRecentSessions } from "@/lib/data/unified";
+import { useAuth } from "@/hooks/useAuth";
 import type { DBResearchSession } from "@/types/database";
 
 export function RecentResearchCard() {
+  const { user, supabase, isReady, dataVersion } = useAuth();
+  const userId = user?.id ?? null;
   const [sessions, setSessions] = useState<DBResearchSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getRecentSessions(3)
-      .then(setSessions)
+    if (!isReady) return;
+
+    getRecentSessions(actorFromAuth(userId ? { id: userId } : null, supabase), 3)
+      .then((nextSessions) => setSessions(nextSessions))
       .catch(() => setSessions([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [userId, supabase, isReady, dataVersion]);
 
-  if (loading) {
+  if (!isReady || loading) {
     return (
       <div className="border border-border bg-card p-4">
         <div className="space-y-2">

@@ -110,6 +110,46 @@ export interface IndexData {
   etf?: string;
 }
 
+export interface SectorPerformance {
+  sector: string;
+  changesPercentage: number;
+}
+
+export interface EarningsEntry {
+  symbol: string;
+  name: string;
+  reportDate: string;
+  epsEstimate: number | null;
+  eps: number | null;
+  revenue: number | null;
+  revenueEstimate: number | null;
+  time: "bmo" | "amc" | "";
+}
+
+export interface CryptoQuote {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePct: number;
+  marketCap: number;
+  volume24h: number;
+  sparkline: number[];
+}
+
+export interface DashboardPayload {
+  indices: IndexData[];
+  sectors: SectorPerformance[];
+  cryptos: CryptoQuote[];
+  gainers: MarketMover[];
+  losers: MarketMover[];
+  actives: MarketMover[];
+  news: NewsArticle[];
+  earnings: EarningsEntry[];
+  heatmapQuotes: Record<string, { price: number; changePct: number; marketCap: number }>;
+  generatedAt: string;
+}
+
 export type TimeRange = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y" | "MAX";
 
 export type ChartType = "candlestick" | "line" | "area";

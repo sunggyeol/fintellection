@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-
-const FINNHUB_KEY = () => process.env.FINNHUB_API_KEY!;
+import { getBatchQuotes } from "@/lib/api/provider-chain";
+import { cached, TTL } from "@/lib/api/cache";
 
 // Popular tickers to track for movers
 const TRACKED_SYMBOLS = [
@@ -32,46 +32,38 @@ interface MoverEntry {
 
 export async function GET() {
   try {
-    // Fetch quotes in parallel from Finnhub (free tier: 60/min)
-    const results = await Promise.allSettled(
-      TRACKED_SYMBOLS.map(async (symbol) => {
-        const res = await fetch(
-          `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY()}`,
-          { next: { revalidate: 120 } }
-        );
-        if (!res.ok) return null;
-        const q = await res.json();
-        if (!q.c || q.c === 0) return null;
-        return {
+    const data = await cached("market-overview", TTL.MARKET_OVERVIEW, async () => {
+      const quotes = await getBatchQuotes(TRACKED_SYMBOLS);
+
+      const entries: MoverEntry[] = [];
+      for (const symbol of TRACKED_SYMBOLS) {
+        const q = quotes.get(symbol);
+        if (!q) continue;
+        entries.push({
           symbol,
-          name: NAMES[symbol] ?? symbol,
-          price: q.c,
-          change: q.d ?? 0,
-          changePct: q.dp ?? 0,
-        } satisfies MoverEntry;
-      })
-    );
+          name: NAMES[symbol] ?? q.name ?? symbol,
+          price: q.price,
+          change: q.change,
+          changePct: q.changePct,
+        });
+      }
 
-    const entries = results
-      .filter(
-        (r): r is PromiseFulfilledResult<MoverEntry> =>
-          r.status === "fulfilled" && r.value !== null
-      )
-      .map((r) => r.value);
+      const sorted = [...entries].sort((a, b) => b.changePct - a.changePct);
 
-    const sorted = [...entries].sort((a, b) => b.changePct - a.changePct);
-
-    return NextResponse.json({
-      gainers: sorted.filter((e) => e.changePct > 0).slice(0, 10),
-      losers: sorted
-        .filter((e) => e.changePct < 0)
-        .reverse()
-        .slice(0, 10),
-      actives: [...entries]
-        .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
-        .slice(0, 10),
-      all: entries,
+      return {
+        gainers: sorted.filter((e) => e.changePct > 0).slice(0, 10),
+        losers: sorted
+          .filter((e) => e.changePct < 0)
+          .reverse()
+          .slice(0, 10),
+        actives: [...entries]
+          .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
+          .slice(0, 10),
+        all: entries,
+      };
     });
+
+    return NextResponse.json(data);
   } catch {
     return NextResponse.json({ gainers: [], losers: [], actives: [], all: [] });
   }

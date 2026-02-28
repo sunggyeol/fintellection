@@ -13,11 +13,11 @@ interface MarketData {
 
 function ColumnHeaders() {
   return (
-    <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-[11px] text-muted-foreground">
-      <span className="w-16 shrink-0">Symbol</span>
+    <div className="flex min-w-0 items-center gap-2 border-b border-border px-3 py-1.5 text-[11px] text-muted-foreground sm:gap-3">
+      <span className="w-14 shrink-0 sm:w-16">Symbol</span>
       <span className="min-w-0 flex-1">Name</span>
-      <span className="w-20 shrink-0 text-right">Price</span>
-      <span className="w-16 shrink-0 text-right">Change %</span>
+      <span className="w-16 shrink-0 text-right sm:w-20">Price</span>
+      <span className="w-14 shrink-0 text-right sm:w-16">Change %</span>
     </div>
   );
 }

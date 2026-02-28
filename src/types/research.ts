@@ -21,4 +21,5 @@ export const TOOL_LABELS: Record<string, string> = {
   rag_query: "Searching knowledge base",
   calculator: "Running calculations",
   sec_filing: "Reading SEC filing",
+  fred_data: "Fetching macro data",
 } as const;

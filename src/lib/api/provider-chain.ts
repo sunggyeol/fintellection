@@ -1,19 +1,15 @@
 import * as finnhub from "./finnhub";
 import * as fmp from "./fmp";
 import * as twelveData from "./twelve-data";
+import * as fred from "./fred";
 import {
   cached,
   isCircuitOpen,
   recordSuccess,
   recordFailure,
+  TTL,
 } from "./cache";
 import type { StockQuote, SearchResult, OHLCVBar, NewsArticle } from "@/types/financial";
-
-// Cache TTLs
-const QUOTE_TTL = 60_000;       // 1 min — quotes change frequently
-const HISTORY_TTL = 300_000;    // 5 min — historical bars don't change intraday
-const NEWS_TTL = 300_000;       // 5 min
-const SEARCH_TTL = 120_000;     // 2 min
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -45,40 +41,43 @@ async function tryTwelveData<T>(fn: () => Promise<T>): Promise<T | null> {
 // ── Quote ────────────────────────────────────────────────────
 
 export async function getStockQuote(symbol: string): Promise<StockQuote | null> {
-  return cached(`quote:${symbol}`, QUOTE_TTL, () => fetchQuote(symbol));
+  return cached(`quote:${symbol}`, TTL.QUOTE, () => fetchQuote(symbol));
 }
 
 async function fetchQuote(symbol: string): Promise<StockQuote | null> {
-  // Finnhub is fast and free — always try first
-  try {
-    const fhQuote = await finnhub.getQuote(symbol);
-    if (fhQuote.c > 0) {
-      // Fire FMP in background for enrichment, but don't block
-      const fmpQ = await Promise.race([
-        tryFmp(() => fmp.getQuote(symbol).then((d) => d[0] ?? null)),
-        new Promise<null>((r) => setTimeout(() => r(null), 1500)),
-      ]);
+  // Indices (^GSPC etc.) are not supported on Finnhub free tier — go straight to FMP
+  if (!symbol.startsWith("^")) {
+    // Finnhub is fast and free — try first for regular stocks
+    try {
+      const fhQuote = await finnhub.getQuote(symbol);
+      if (fhQuote.c > 0) {
+        // Fire FMP in background for enrichment, but don't block
+        const fmpQ = await Promise.race([
+          tryFmp(() => fmp.getQuote(symbol).then((d) => d[0] ?? null)),
+          new Promise<null>((r) => setTimeout(() => r(null), 1500)),
+        ]);
 
-      return {
-        symbol,
-        name: fmpQ?.name ?? symbol,
-        price: fhQuote.c,
-        change: fhQuote.d ?? 0,
-        changePct: fhQuote.dp ?? 0,
-        volume: fmpQ?.volume ?? 0,
-        marketCap: fmpQ?.marketCap ?? 0,
-        peRatio: fmpQ?.pe ?? null,
-        week52High: fmpQ?.yearHigh ?? fhQuote.h,
-        week52Low: fmpQ?.yearLow ?? fhQuote.l,
-        exchange: fmpQ?.exchange ?? "",
-        updatedAt: new Date().toISOString(),
-      };
+        return {
+          symbol,
+          name: fmpQ?.name ?? symbol,
+          price: fhQuote.c,
+          change: fhQuote.d ?? 0,
+          changePct: fhQuote.dp ?? 0,
+          volume: fmpQ?.volume ?? 0,
+          marketCap: fmpQ?.marketCap ?? 0,
+          peRatio: fmpQ?.pe ?? null,
+          week52High: fmpQ?.yearHigh ?? fhQuote.h,
+          week52Low: fmpQ?.yearLow ?? fhQuote.l,
+          exchange: fmpQ?.exchange ?? "",
+          updatedAt: new Date().toISOString(),
+        };
+      }
+    } catch {
+      // Finnhub failed — fall through to FMP
     }
-  } catch {
-    // Finnhub failed
   }
 
-  // Fallback to FMP only
+  // FMP: primary for indices, fallback for stocks
   const fmpData = await tryFmp(() => fmp.getQuote(symbol));
   if (fmpData?.[0]) {
     const q = fmpData[0];
@@ -121,7 +120,7 @@ export async function getBatchQuotes(
 // ── Search ───────────────────────────────────────────────────
 
 export async function searchStocks(query: string): Promise<SearchResult[]> {
-  return cached(`search:${query.toLowerCase()}`, SEARCH_TTL, async () => {
+  return cached(`search:${query.toLowerCase()}`, TTL.SEARCH, async () => {
     try {
       const result = await finnhub.searchSymbols(query);
       return result.result.slice(0, 10).map((r) => ({
@@ -144,7 +143,11 @@ export async function getHistoricalData(
   to?: string
 ): Promise<OHLCVBar[]> {
   const cacheKey = `history:${symbol}:${from ?? ""}:${to ?? ""}`;
-  return cached(cacheKey, HISTORY_TTL, () => fetchHistory(symbol, from, to));
+  // Past-date OHLCV is immutable; only today's bars need frequent refresh
+  const today = new Date().toISOString().split("T")[0];
+  const isHistorical = to && to < today;
+  const ttl = isHistorical ? TTL.HISTORY_PAST : TTL.HISTORY_LIVE;
+  return cached(cacheKey, ttl, () => fetchHistory(symbol, from, to));
 }
 
 async function fetchHistory(
@@ -223,7 +226,7 @@ async function fetchHistory(
 // ── News ─────────────────────────────────────────────────────
 
 export async function getStockNews(symbol: string): Promise<NewsArticle[]> {
-  return cached(`news:${symbol}`, NEWS_TTL, () => fetchNews(symbol));
+  return cached(`news:${symbol}`, TTL.NEWS, () => fetchNews(symbol));
 }
 
 async function fetchNews(symbol: string): Promise<NewsArticle[]> {
@@ -266,4 +269,92 @@ async function fetchNews(symbol: string): Promise<NewsArticle[]> {
   }
 
   return [];
+}
+
+// ── Company Profile (cached) ────────────────────────────────
+
+export async function getCompanyProfile(symbol: string) {
+  return cached(`profile:${symbol}`, TTL.PROFILE, async () => {
+    const result = await tryFmp(() => fmp.getProfile(symbol));
+    return result?.[0] ?? null;
+  });
+}
+
+// ── Key Metrics (cached) ────────────────────────────────────
+
+export async function getKeyMetrics(symbol: string) {
+  return cached(`metrics:${symbol}`, TTL.METRICS, async () => {
+    const result = await tryFmp(() => fmp.getKeyMetrics(symbol));
+    return result?.[0] ?? null;
+  });
+}
+
+export async function getKeyMetricsAlt(symbol: string) {
+  return cached(`metricsAlt:${symbol}`, TTL.METRICS, async () => {
+    const result = await tryFmp(() => fmp.getKeyMetricsAlt(symbol));
+    return result?.[0] ?? null;
+  });
+}
+
+// ── FRED (Federal Reserve Economic Data) ────────────────────
+
+async function tryFred<T>(fn: () => Promise<T>): Promise<T | null> {
+  if (isCircuitOpen("fred")) return null;
+  try {
+    const result = await fn();
+    recordSuccess("fred");
+    return result;
+  } catch {
+    recordFailure("fred");
+    return null;
+  }
+}
+
+export async function getFredSeries(
+  seriesId: string,
+  options?: Parameters<typeof fred.getSeriesObservations>[1]
+) {
+  const optKey = options
+    ? `:${options.observationStart ?? ""}:${options.observationEnd ?? ""}:${options.limit ?? ""}:${options.frequency ?? ""}`
+    : "";
+  const cacheKey = `fred:obs:${seriesId}${optKey}`;
+
+  return cached(cacheKey, TTL.FRED, async () => {
+    const raw = await tryFred(() => fred.getSeriesObservations(seriesId, options));
+    if (!raw) return null;
+    return fred.parseObservations(raw);
+  });
+}
+
+export async function getFredSeriesInfo(seriesId: string) {
+  return cached(`fred:meta:${seriesId}`, TTL.FRED_META, async () => {
+    const info = await tryFred(() => fred.getSeriesInfo(seriesId));
+    return info?.seriess[0] ?? null;
+  });
+}
+
+/**
+ * Pre-cache key macro series. Call once on server startup.
+ * Fetches last 12 months of data for each series.
+ */
+export async function preCacheFredSeries(): Promise<void> {
+  if (!process.env.FRED_API_KEY) {
+    console.log("[FRED] No API key configured, skipping pre-cache");
+    return;
+  }
+
+  const oneYearAgo = new Date(Date.now() - 365 * 86_400_000)
+    .toISOString()
+    .split("T")[0];
+
+  const seriesIds = Object.keys(fred.KEY_MACRO_SERIES) as fred.FredSeriesId[];
+
+  await Promise.allSettled(
+    seriesIds.map(async (id) => {
+      await getFredSeries(id, { observationStart: oneYearAgo, sortOrder: "asc" });
+      await getFredSeriesInfo(id);
+    })
+  );
+
+  console.log(`[FRED] Pre-cached ${seriesIds.length} macro series`);
 }

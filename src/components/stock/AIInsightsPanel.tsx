@@ -9,7 +9,7 @@ interface AIInsightsPanelProps {
   companyName?: string;
 }
 
-const QUICK_ANALYSES = [
+const STOCK_ANALYSES = [
   "Full fundamental analysis",
   "Competitive landscape",
   "Recent news & sentiment",
@@ -17,9 +17,19 @@ const QUICK_ANALYSES = [
   "Risk assessment",
 ] as const;
 
+const INDEX_ANALYSES = [
+  "Market overview & trend analysis",
+  "Recent news & sentiment",
+  "Sector performance breakdown",
+  "Macro economic outlook",
+] as const;
+
 export function AIInsightsPanel({ symbol, companyName }: AIInsightsPanelProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const isIndex = symbol.startsWith("^");
+  const displayName = companyName || symbol;
+  const analyses = isIndex ? INDEX_ANALYSES : STOCK_ANALYSES;
 
   const handleAnalyze = (analysisType: string) => {
     setLoading(analysisType);
@@ -28,7 +38,6 @@ export function AIInsightsPanel({ symbol, companyName }: AIInsightsPanelProps) {
         ? `Analyze ${symbol}${companyName ? ` (${companyName})` : ""} — full fundamental analysis including valuation, growth prospects, and risks`
         : `${analysisType} for ${symbol}${companyName ? ` (${companyName})` : ""}`;
 
-    // Navigate to research page with query as URL param
     router.push(`/research?q=${encodeURIComponent(query)}`);
   };
 
@@ -37,17 +46,17 @@ export function AIInsightsPanel({ symbol, companyName }: AIInsightsPanelProps) {
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <BrainCircuit className="size-4 text-primary" />
         <span className="text-sm font-medium text-foreground">
-          AI Analyst
+          Analyst
         </span>
       </div>
 
       <div className="p-4">
         <p className="mb-3 text-xs text-muted-foreground">
-          Run AI-powered analysis on {symbol}
+          Run AI-powered analysis on {displayName}
         </p>
 
         <div className="space-y-1.5">
-          {QUICK_ANALYSES.map((analysis) => (
+          {analyses.map((analysis) => (
             <button
               key={analysis}
               onClick={() => handleAnalyze(analysis)}

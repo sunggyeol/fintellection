@@ -10,7 +10,7 @@ export default async function StockDetailPage({
   params,
 }: StockDetailPageProps) {
   const { symbol } = await params;
-  const ticker = symbol.toUpperCase();
+  const ticker = decodeURIComponent(symbol).toUpperCase();
 
   return (
     <Suspense

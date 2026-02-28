@@ -42,27 +42,29 @@ export function ChartCore({
       chartRef.current = null;
     }
 
+    const isDark = document.documentElement.classList.contains("dark");
+
     const chartOptions: DeepPartial<ChartOptions> = {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#6b7280",
+        textColor: isDark ? "#787b86" : "#6b7280",
         fontFamily: "'Inter', sans-serif",
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "#e5e7eb" },
-        horzLines: { color: "#e5e7eb" },
+        vertLines: { color: isDark ? "#1e222d" : "#e5e7eb" },
+        horzLines: { color: isDark ? "#1e222d" : "#e5e7eb" },
       },
       crosshair: {
-        vertLine: { color: "#1e40af", width: 1, style: 2 },
-        horzLine: { color: "#1e40af", width: 1, style: 2 },
+        vertLine: { color: isDark ? "#2962ff" : "#1e40af", width: 1, style: 2 },
+        horzLine: { color: isDark ? "#2962ff" : "#1e40af", width: 1, style: 2 },
       },
       rightPriceScale: {
-        borderColor: "#e5e7eb",
+        borderColor: isDark ? "#1e222d" : "#e5e7eb",
         scaleMargins: { top: 0.1, bottom: showVolume ? 0.25 : 0.05 },
       },
       timeScale: {
-        borderColor: "#e5e7eb",
+        borderColor: isDark ? "#1e222d" : "#e5e7eb",
         timeVisible: true,
         secondsVisible: false,
       },
@@ -87,17 +89,17 @@ export function ChartCore({
 
     if (chartType === "candlestick") {
       const series = chart.addSeries(CandlestickSeries, {
-        upColor: "#16a34a",
-        downColor: "#dc2626",
-        borderUpColor: "#16a34a",
-        borderDownColor: "#dc2626",
-        wickUpColor: "#16a34a",
-        wickDownColor: "#dc2626",
+        upColor: isDark ? "#26a69a" : "#16a34a",
+        downColor: isDark ? "#ef5350" : "#dc2626",
+        borderUpColor: isDark ? "#26a69a" : "#16a34a",
+        borderDownColor: isDark ? "#ef5350" : "#dc2626",
+        wickUpColor: isDark ? "#26a69a" : "#16a34a",
+        wickDownColor: isDark ? "#ef5350" : "#dc2626",
       });
       series.setData(candlestickData);
     } else if (chartType === "line") {
       const series = chart.addSeries(LineSeries, {
-        color: "#1e40af",
+        color: isDark ? "#2962ff" : "#1e40af",
         lineWidth: 2,
       });
       series.setData(
@@ -108,9 +110,9 @@ export function ChartCore({
       );
     } else {
       const series = chart.addSeries(AreaSeries, {
-        topColor: "rgba(30, 64, 175, 0.15)",
-        bottomColor: "rgba(30, 64, 175, 0.02)",
-        lineColor: "#1e40af",
+        topColor: isDark ? "rgba(41, 98, 255, 0.15)" : "rgba(30, 64, 175, 0.15)",
+        bottomColor: isDark ? "rgba(41, 98, 255, 0.02)" : "rgba(30, 64, 175, 0.02)",
+        lineColor: isDark ? "#2962ff" : "#1e40af",
         lineWidth: 2,
       });
       series.setData(
