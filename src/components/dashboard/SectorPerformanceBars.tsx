@@ -27,15 +27,6 @@ const SECTOR_ETF: Record<string, string> = {
   "Materials": "XLB",
 };
 
-function shortSectorName(sector: string): string {
-  if (sector === "Communication Services") return "Comm Services";
-  if (sector === "Consumer Discretionary") return "Consumer Disc";
-  if (sector === "Consumer Cyclical") return "Consumer Disc";
-  if (sector === "Consumer Defensive") return "Consumer Stpl";
-  if (sector === "Consumer Staples") return "Consumer Stpl";
-  if (sector === "Basic Materials") return "Materials";
-  return sector;
-}
 
 export function SectorPerformanceBars({ sectors, loading }: SectorPerformanceBarsProps) {
   if (loading) {
@@ -72,8 +63,8 @@ export function SectorPerformanceBars({ sectors, loading }: SectorPerformanceBar
 
           const content = (
             <div className="group flex items-center gap-2 py-1">
-              <span className="w-20 shrink-0 truncate text-[11px] text-muted-foreground group-hover:text-foreground sm:w-24 sm:text-[12px]">
-                {shortSectorName(sector.sector)}
+              <span className="w-36 shrink-0 text-[11px] text-muted-foreground group-hover:text-foreground sm:w-40 sm:text-[12px]">
+                {sector.sector}
               </span>
               <div className="relative flex h-4 flex-1 items-center">
                 {/* Center line */}

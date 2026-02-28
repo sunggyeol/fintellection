@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, Plus, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { useWatchlist } from "@/hooks/useWatchlist";
 
@@ -12,12 +13,34 @@ export function GlobalSearch() {
   const { isOpen, query, setQuery, results, loading, close } =
     useGlobalSearch();
   const { watchlist, add } = useWatchlist();
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
+    if (isOpen) {
+      setMounted(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setVisible(true));
+      });
+    } else {
+      setVisible(false);
+      const timer = setTimeout(() => setMounted(false), 150);
+      return () => clearTimeout(timer);
+    }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen && visible) inputRef.current?.focus();
+  }, [isOpen, visible]);
+
+  // Reset selection when results change
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [results]);
+
+  if (!mounted) return null;
 
   const watchedSymbols = watchlist?.symbols ?? [];
 
@@ -25,12 +48,20 @@ export function GlobalSearch() {
     <div className="fixed inset-0 z-50 flex items-start justify-center px-3 pt-[18vh] sm:px-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70"
+        className={cn(
+          "absolute inset-0 bg-black/70 transition-opacity duration-150",
+          visible ? "opacity-100" : "opacity-0"
+        )}
         onClick={close}
       />
 
       {/* Search modal */}
-      <div className="relative w-full max-w-md border border-border bg-surface shadow-2xl">
+      <div className={cn(
+        "relative w-full max-w-md border border-border bg-surface shadow-2xl transition-all duration-150",
+        visible
+          ? "translate-y-0 scale-100 opacity-100"
+          : "-translate-y-2 scale-[0.98] opacity-0"
+      )}>
         {/* Input */}
         <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
           {loading ? (
@@ -43,8 +74,30 @@ export function GlobalSearch() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (results.length === 0) return;
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setActiveIndex((i) => {
+                  const next = i < results.length - 1 ? i + 1 : 0;
+                  listRef.current?.children[next]?.scrollIntoView({ block: "nearest" });
+                  return next;
+                });
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setActiveIndex((i) => {
+                  const next = i > 0 ? i - 1 : results.length - 1;
+                  listRef.current?.children[next]?.scrollIntoView({ block: "nearest" });
+                  return next;
+                });
+              } else if (e.key === "Enter" && activeIndex >= 0) {
+                e.preventDefault();
+                router.push(`/stock/${results[activeIndex].symbol}`);
+                close();
+              }
+            }}
             placeholder="Search symbol or name..."
-            className="flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground outline-none"
+            className="flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground outline-none sm:text-[13px]"
             autoComplete="off"
           />
           <kbd className="bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -54,13 +107,18 @@ export function GlobalSearch() {
 
         {/* Results */}
         {results.length > 0 && (
-          <div className="max-h-72 overflow-y-auto py-0.5">
-            {results.map((result) => {
+          <div ref={listRef} className="max-h-72 overflow-y-auto py-0.5">
+            {results.map((result, index) => {
               const isWatched = watchedSymbols.includes(result.symbol);
+              const isActive = index === activeIndex;
               return (
                 <div
                   key={result.symbol}
-                  className="flex items-center hover:bg-elevated"
+                  className={cn(
+                    "flex items-center hover:bg-elevated",
+                    isActive && "bg-elevated"
+                  )}
+                  onMouseEnter={() => setActiveIndex(index)}
                 >
                   <button
                     onClick={() => {
