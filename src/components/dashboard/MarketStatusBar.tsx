@@ -16,6 +16,8 @@ interface Exchange {
 }
 
 const EXCHANGES: Exchange[] = [
+  { name: "Korea KOSPI", abbr: "KOSPI", timezone: "Asia/Seoul",          hours: [9, 0, 15, 30] },
+  { name: "Korea KOSDAQ",abbr: "KOSDAQ",timezone: "Asia/Seoul",          hours: [9, 0, 15, 30] },
   { name: "NYSE",      abbr: "NYSE",    timezone: "America/New_York",    hours: [9, 30, 16, 0] },
   { name: "NASDAQ",    abbr: "NSDQ",    timezone: "America/New_York",    hours: [9, 30, 16, 0] },
   { name: "London",    abbr: "LSE",     timezone: "Europe/London",       hours: [8, 0, 16, 30] },

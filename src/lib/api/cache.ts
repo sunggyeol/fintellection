@@ -7,6 +7,7 @@
 
 export const TTL = {
   QUOTE: 60_000,                // 1 min — real-time prices
+  QUOTE_OPEN: 60_000,           // 1 min — regular trading session quotes
   SEARCH: 120_000,              // 2 min — user-driven
   NEWS: 900_000,                // 15 min — news doesn't change sub-minute
   HISTORY_LIVE: 300_000,        // 5 min — today's bars still changing
@@ -18,7 +19,9 @@ export const TTL = {
   FRED: 86_400_000,             // 24 hr — most series update monthly
   FRED_META: 604_800_000,       // 7 days — series metadata
   MARKET_OVERVIEW: 120_000,     // 2 min — dashboard movers
+  MARKET_OVERVIEW_OPEN: 120_000,// 2 min — movers during regular session
   DASHBOARD: 120_000,           // 2 min — consolidated dashboard
+  DASHBOARD_OPEN: 120_000,      // 2 min — equities dashboard during regular session
   SECTORS: 300_000,             // 5 min — sector performance
   EARNINGS: 900_000,            // 15 min — earnings calendar
   CRYPTO: 60_000,               // 1 min — crypto prices

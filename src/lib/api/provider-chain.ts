@@ -2,6 +2,7 @@ import * as finnhub from "./finnhub";
 import * as fmp from "./fmp";
 import * as twelveData from "./twelve-data";
 import * as fred from "./fred";
+import * as stooq from "./stooq";
 import {
   cached,
   isCircuitOpen,
@@ -9,6 +10,7 @@ import {
   recordFailure,
   TTL,
 } from "./cache";
+import { getOffHoursFreezeTtlMs, isUsRegularSessionOpen } from "@/lib/market-hours";
 import type { StockQuote, SearchResult, OHLCVBar, NewsArticle } from "@/types/financial";
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -38,10 +40,23 @@ async function tryTwelveData<T>(fn: () => Promise<T>): Promise<T | null> {
   }
 }
 
+async function tryStooq<T>(fn: () => Promise<T>): Promise<T | null> {
+  if (isCircuitOpen("stooq")) return null;
+  try {
+    const result = await fn();
+    recordSuccess("stooq");
+    return result;
+  } catch {
+    recordFailure("stooq");
+    return null;
+  }
+}
+
 // ── Quote ────────────────────────────────────────────────────
 
 export async function getStockQuote(symbol: string): Promise<StockQuote | null> {
-  return cached(`quote:${symbol}`, TTL.QUOTE, () => fetchQuote(symbol));
+  const ttl = isUsRegularSessionOpen() ? TTL.QUOTE_OPEN : getOffHoursFreezeTtlMs();
+  return cached(`quote:${symbol}`, ttl, () => fetchQuote(symbol));
 }
 
 async function fetchQuote(symbol: string): Promise<StockQuote | null> {
@@ -95,6 +110,27 @@ async function fetchQuote(symbol: string): Promise<StockQuote | null> {
       exchange: q.exchange ?? "",
       updatedAt: new Date().toISOString(),
     };
+  }
+
+  // Stooq fallback for index-style symbols (e.g., ^DAX, ^KOSPI).
+  if (symbol.startsWith("^")) {
+    const sq = await tryStooq(() => stooq.getQuote(symbol));
+    if (sq) {
+      return {
+        symbol,
+        name: sq.name || symbol,
+        price: sq.close,
+        change: sq.change,
+        changePct: sq.changePct,
+        volume: sq.volume,
+        marketCap: 0,
+        peRatio: null,
+        week52High: sq.high,
+        week52Low: sq.low,
+        exchange: "INDEX",
+        updatedAt: new Date().toISOString(),
+      };
+    }
   }
 
   return null;

@@ -38,7 +38,7 @@ export function ResearchInput({
 
   return (
     <div className="border-t border-border bg-surface p-4">
-      <div className="mx-auto flex max-w-3xl min-w-0 items-end gap-2">
+      <div className="mx-auto flex max-w-3xl min-w-0 items-start gap-2">
         <textarea
           ref={textareaRef}
           suppressHydrationWarning
@@ -52,7 +52,7 @@ export function ResearchInput({
         {isStreaming ? (
           <button
             onClick={onStop}
-            className="flex size-9 shrink-0 items-center justify-center bg-foreground text-background transition-colors hover:bg-foreground/80"
+            className="mt-[3px] flex size-9 shrink-0 items-center justify-center bg-foreground text-background transition-colors hover:bg-foreground/80"
           >
             <Square className="size-3.5" />
           </button>
@@ -61,7 +61,7 @@ export function ResearchInput({
             onClick={onSubmit}
             disabled={!value.trim()}
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center transition-colors",
+              "mt-[3px] flex size-9 shrink-0 items-center justify-center transition-colors",
               value.trim()
                 ? "bg-primary text-primary-foreground hover:bg-primary/90"
                 : "bg-muted text-muted-foreground cursor-not-allowed"

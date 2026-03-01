@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { cached, TTL } from "@/lib/api/cache";
+import { getChatModel } from "@/lib/ai/model";
+import { createHash } from "node:crypto";
 
 interface SummaryInput {
   indices: { name: string; value: number; changePct: number }[];
@@ -23,7 +24,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const summary = await cached("market-summary", TTL.MARKET_SUMMARY, async () => {
+    const summaryPayload = {
+      indices: body.indices?.slice(0, 8) ?? [],
+      gainers: body.gainers?.slice(0, 5) ?? [],
+      losers: body.losers?.slice(0, 5) ?? [],
+      sectors: body.sectors?.slice(0, 8) ?? [],
+      news: body.news?.slice(0, 8) ?? [],
+    };
+    const cacheKey = `market-summary:${createHash("sha256")
+      .update(JSON.stringify(summaryPayload))
+      .digest("hex")
+      .slice(0, 16)}`;
+
+    const summary = await cached(cacheKey, TTL.MARKET_SUMMARY, async () => {
       const indexSummary = body.indices
         .map((i) => `${i.name}: ${i.value.toLocaleString()} (${i.changePct >= 0 ? "+" : ""}${i.changePct.toFixed(2)}%)`)
         .join(", ");
@@ -49,7 +62,14 @@ export async function POST(req: NextRequest) {
         .join("; ") || "No headlines available";
 
       const { text } = await generateText({
-        model: anthropic("claude-sonnet-4-6"),
+        model: getChatModel(),
+        providerOptions: {
+          google: {
+            thinkingConfig: {
+              thinkingBudget: 0,
+            },
+          },
+        },
         system: "You are a financial market analyst. You respond ONLY with a JSON object. No markdown, no explanation, no analysis steps.",
         prompt: `Write a 2 sentence market summary from this data. Be concise and direct. Respond with ONLY this JSON format, nothing else:
 {"summary":"your 2 sentence summary here","sentiment":"bullish or bearish or neutral"}
@@ -60,9 +80,11 @@ Rules:
 - Focus on the dominant market theme and overall sentiment
 
 Indices: ${indexSummary}
+Top Gainers: ${topGainers || "N/A"}
+Top Losers: ${topLosers || "N/A"}
 Sectors: ${sectorSummary}
 Headlines: ${newsHeadlines}`,
-        maxOutputTokens: 200,
+        maxOutputTokens: 400,
       });
 
       // Extract JSON even if model wraps it in markdown or extra text

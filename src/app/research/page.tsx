@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { MessageList } from "@/components/research/MessageList";
 import { ResearchInput } from "@/components/research/ResearchInput";
 import { FollowUpCards } from "@/components/research/FollowUpCards";
@@ -45,14 +46,16 @@ export default function ResearchPage() {
 
 function ResearchPageInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [input, setInput] = useState("");
   const [showDesktopHistory, setShowDesktopHistory] = useState(true);
   const [showMobileHistory, setShowMobileHistory] = useState(false);
-  const { save } = useResearchHistory();
+  const { save, loadSession, currentSessionId, setCurrentSessionId } = useResearchHistory();
   const savedRef = useRef(false);
   const autoSentRef = useRef(false);
+  const sessionLoadedRef = useRef(false);
 
-  const { messages, setMessages, sendMessage, stop, status } = useChat({
+  const { messages, setMessages, sendMessage, regenerate, stop, status } = useChat({
     onError: (error) => {
       console.error("[Chat stream error]", error);
     },
@@ -70,6 +73,23 @@ function ResearchPageInner() {
     }
   }, [searchParams, status, sendMessage]);
 
+  // Load session from ?session= param (e.g., from [id] page "Continue" button)
+  useEffect(() => {
+    const sessionId = searchParams.get("session");
+    if (sessionId && !sessionLoadedRef.current) {
+      sessionLoadedRef.current = true;
+      loadSession(sessionId).then((result) => {
+        if (result) {
+          setMessages(result.messages);
+          setCurrentSessionId(sessionId);
+          savedRef.current = true;
+          // Clean URL without full navigation
+          router.replace("/research", { scroll: false });
+        }
+      });
+    }
+  }, [searchParams, loadSession, setMessages, setCurrentSessionId, router]);
+
   // Save session when streaming completes (assistant responded)
   useEffect(() => {
     if (
@@ -78,14 +98,17 @@ function ResearchPageInner() {
       !savedRef.current
     ) {
       savedRef.current = true;
-      save(messages).catch(() => {
+      save(messages, undefined, currentSessionId ?? undefined).then((id) => {
+        // Track the session ID so continued messages update the same record
+        if (id && !currentSessionId) setCurrentSessionId(id);
+      }).catch(() => {
         // Non-critical: session save failed (e.g., DB migration issue)
       });
     }
     if (status === "streaming") {
       savedRef.current = false;
     }
-  }, [status, messages, save]);
+  }, [status, messages, save, currentSessionId, setCurrentSessionId]);
 
   const handleSubmit = () => {
     if (!input.trim() || isStreaming) return;
@@ -94,15 +117,32 @@ function ResearchPageInner() {
     sendMessage({ text });
   };
 
+  const handleRetry = (message: UIMessage) => {
+    regenerate({ messageId: message.id });
+  };
+
   const handleStarterClick = (query: string) => {
     setInput("");
     sendMessage({ text: query });
   };
 
+  const handleLoadSession = useCallback(async (sessionId: string) => {
+    const result = await loadSession(sessionId);
+    if (result) {
+      if (isStreaming) stop();
+      setMessages(result.messages);
+      setCurrentSessionId(sessionId);
+      savedRef.current = true;
+      setInput("");
+      setShowMobileHistory(false);
+    }
+  }, [loadSession, isStreaming, stop, setMessages, setCurrentSessionId]);
+
   const handleNewChat = () => {
     if (isStreaming) stop();
     setInput("");
     setMessages([]);
+    setCurrentSessionId(null);
     savedRef.current = false;
   };
 
@@ -148,7 +188,7 @@ function ResearchPageInner() {
 
         {hasMessages ? (
           <>
-            <MessageList messages={messages} isStreaming={isStreaming} />
+            <MessageList messages={messages} isStreaming={isStreaming} onRetry={handleRetry} />
             {!isStreaming && messages.length > 1 && (
               <div className="overflow-x-hidden px-4 pb-2">
                 <FollowUpCards
@@ -204,6 +244,7 @@ function ResearchPageInner() {
       >
         {showDesktopHistory ? (
           <ResearchHistory
+            onSelectSession={handleLoadSession}
             headerActions={
               <button
                 type="button"
@@ -238,6 +279,7 @@ function ResearchPageInner() {
         >
           <SheetTitle className="sr-only">Research History</SheetTitle>
           <ResearchHistory
+            onSelectSession={handleLoadSession}
             headerActions={
               <button
                 type="button"

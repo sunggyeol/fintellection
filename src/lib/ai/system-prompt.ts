@@ -49,4 +49,4 @@ List all sources as clickable markdown links: [Source Name](URL). Always include
 - Never provide investment advice — always frame analysis as informational`;
 
 export const AI_DISCLAIMER =
-  "AI-generated analysis for informational purposes only. Not investment advice. Verify before acting.";
+  "AI-generated analysis for informational purposes only. Not investment advice.";

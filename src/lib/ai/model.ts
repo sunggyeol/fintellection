@@ -1,48 +1,89 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
-import type { LanguageModel } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { wrapLanguageModel, type LanguageModel } from "ai";
 
-const DEFAULT_FIREWORKS_BASE_URL = "https://api.fireworks.ai/inference/v1";
-const DEFAULT_FIREWORKS_MODEL = "accounts/fireworks/models/minimax-m2p5";
-const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
-
-type LlmProvider = "fireworks" | "anthropic";
-
-function parseProvider(): LlmProvider {
-  const provider = process.env.LLM_PROVIDER?.toLowerCase() ?? "fireworks";
-
-  if (provider === "fireworks" || provider === "anthropic") {
-    return provider;
-  }
-
-  throw new Error(
-    `Invalid LLM_PROVIDER "${provider}". Expected "fireworks" or "anthropic".`
-  );
-}
+const DEFAULT_GOOGLE_MODEL = "gemini-3-flash-preview";
+const DEFAULT_ANTHROPIC_FALLBACK_MODEL = "claude-sonnet-4-6";
 
 export function getChatModel(): LanguageModel {
-  const provider = parseProvider();
+  const fallbackModel = getAnthropicFallbackModel();
 
-  if (provider === "anthropic") {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error(
-        "ANTHROPIC_API_KEY is required when LLM_PROVIDER=anthropic."
+  try {
+    const primaryModel = getGooglePrimaryModel();
+    return fallbackModel
+      ? wrapWithFallback(primaryModel, fallbackModel)
+      : primaryModel;
+  } catch (error) {
+    if (fallbackModel) {
+      console.warn(
+        `[AI] Google primary model unavailable. Using Anthropic fallback (${DEFAULT_ANTHROPIC_FALLBACK_MODEL}).`,
+        error
       );
+      return fallbackModel;
     }
-    return anthropic(DEFAULT_ANTHROPIC_MODEL);
+    throw error;
   }
+}
 
-  if (!process.env.FIREWORKS_API_KEY) {
+function getGooglePrimaryModel() {
+  const googleApiKey =
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GOOGLE_API_KEY;
+
+  if (!googleApiKey) {
     throw new Error(
-      "FIREWORKS_API_KEY is required when LLM_PROVIDER=fireworks."
+      "GOOGLE_GENERATIVE_AI_API_KEY (or GOOGLE_API_KEY) is required for the primary Gemini model."
     );
   }
 
-  const fireworks = createOpenAI({
-    name: "fireworks",
-    apiKey: process.env.FIREWORKS_API_KEY,
-    baseURL: process.env.FIREWORKS_BASE_URL ?? DEFAULT_FIREWORKS_BASE_URL,
+  const google = createGoogleGenerativeAI({
+    apiKey: googleApiKey,
   });
 
-  return fireworks.chat(process.env.FIREWORKS_MODEL ?? DEFAULT_FIREWORKS_MODEL);
+  return google.chat(
+    process.env.GOOGLE_MODEL ?? process.env.GEMINI_MODEL ?? DEFAULT_GOOGLE_MODEL
+  );
+}
+
+function getAnthropicFallbackModel() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return null;
+  }
+
+  return anthropic(
+    process.env.ANTHROPIC_MODEL ?? DEFAULT_ANTHROPIC_FALLBACK_MODEL
+  );
+}
+
+function wrapWithFallback(
+  primaryModel: ReturnType<typeof getGooglePrimaryModel>,
+  fallbackModel: ReturnType<typeof anthropic>
+): LanguageModel {
+  return wrapLanguageModel({
+    model: primaryModel,
+    middleware: {
+      specificationVersion: "v3",
+      wrapGenerate: async ({ doGenerate, params }) => {
+        try {
+          return await doGenerate();
+        } catch (error) {
+          console.warn(
+            `[AI] Primary Gemini generate failed. Falling back to Anthropic (${DEFAULT_ANTHROPIC_FALLBACK_MODEL}).`,
+            error
+          );
+          return fallbackModel.doGenerate(params);
+        }
+      },
+      wrapStream: async ({ doStream, params }) => {
+        try {
+          return await doStream();
+        } catch (error) {
+          console.warn(
+            `[AI] Primary Gemini stream failed. Falling back to Anthropic (${DEFAULT_ANTHROPIC_FALLBACK_MODEL}).`,
+            error
+          );
+          return fallbackModel.doStream(params);
+        }
+      },
+    },
+  });
 }

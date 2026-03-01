@@ -41,15 +41,15 @@ export function AuthStatusButton() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  if (!isReady) {
-    return <div className="h-7 w-[84px]" aria-hidden />;
-  }
-
-  if (mode === "anonymous") {
+  // Once we have a user from the session, show profile immediately.
+  // This avoids bouncing: sign-in → profile → sign-in → profile
+  // caused by initializingUser flipping isReady back to false.
+  if (!user) {
     return (
       <button
         type="button"
         onClick={async () => {
+          if (!isReady) return;
           setBusy(true);
           try {
             await signInWithGoogle();
@@ -57,8 +57,8 @@ export function AuthStatusButton() {
             setBusy(false);
           }
         }}
-        disabled={busy}
-        className="inline-flex h-7 items-center gap-1.5 border border-border bg-card px-2.5 text-xs text-foreground transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={busy || !isReady}
+        className="inline-flex size-7 items-center justify-center border border-border bg-card text-xs text-foreground transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 sm:h-7 sm:w-auto sm:gap-1.5 sm:px-2.5"
       >
         {busy ? (
           <Loader2 className="size-3 animate-spin" />
@@ -71,12 +71,12 @@ export function AuthStatusButton() {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative" style={{ animation: "fade-in 200ms ease-out" }}>
       {/* Profile button */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-7 items-center gap-1.5 border border-border bg-card px-2 text-xs text-foreground transition-colors hover:bg-elevated"
+        className="inline-flex size-7 items-center justify-center border border-border bg-card text-xs text-foreground transition-colors hover:bg-elevated sm:h-7 sm:w-auto sm:gap-1.5 sm:px-2"
       >
         <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
           {initials}
@@ -84,7 +84,7 @@ export function AuthStatusButton() {
         <span className="hidden max-w-[140px] truncate sm:inline">
           {displayName}
         </span>
-        <ChevronDown className="size-3 text-muted-foreground" />
+        <ChevronDown className="hidden size-3 text-muted-foreground sm:block" />
       </button>
 
       {/* Dropdown */}

@@ -7,9 +7,10 @@ import type { UIMessage } from "ai";
 interface MessageListProps {
   messages: UIMessage[];
   isStreaming?: boolean;
+  onRetry?: (message: UIMessage) => void;
 }
 
-export function MessageList({ messages, isStreaming }: MessageListProps) {
+export function MessageList({ messages, isStreaming, onRetry }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   const rafRef = useRef<number>(0);
@@ -63,7 +64,7 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
     >
       <div className="mx-auto flex max-w-3xl min-w-0 flex-col gap-4">
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble key={msg.id} message={msg} onRetry={onRetry} />
         ))}
       </div>
     </div>

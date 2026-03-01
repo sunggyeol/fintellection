@@ -1,18 +1,19 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { Clock, Trash2, MessageSquare } from "lucide-react";
 import { useResearchHistory } from "@/hooks/useResearchHistory";
 
 interface ResearchHistoryProps {
   headerActions?: ReactNode;
+  onSelectSession?: (id: string) => void;
 }
 
 export function ResearchHistory({
   headerActions,
+  onSelectSession,
 }: ResearchHistoryProps = {}) {
-  const { sessions, loading, deleteSession } = useResearchHistory();
+  const { sessions, loading, deleteSession, currentSessionId } = useResearchHistory();
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -46,12 +47,15 @@ export function ResearchHistory({
           {sessions.map((session) => (
             <div
               key={session.id}
-              className="group flex items-start gap-2 border-b border-border px-3 py-2.5 transition-colors hover:bg-elevated"
+              className={[
+                "group flex items-start gap-2 border-b border-border px-3 py-2.5 transition-colors hover:bg-elevated",
+                currentSessionId === session.id ? "bg-elevated" : "",
+              ].join(" ")}
             >
               <MessageSquare className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-              <Link
-                href={`/research/${session.id}`}
-                className="min-w-0 flex-1"
+              <button
+                onClick={() => onSelectSession?.(session.id)}
+                className="min-w-0 flex-1 text-left"
               >
                 <p className="text-xs font-medium text-foreground line-clamp-2">
                   {session.title}
@@ -70,7 +74,7 @@ export function ResearchHistory({
                     </>
                   )}
                 </div>
-              </Link>
+              </button>
               <button
                 onClick={(e) => {
                   e.preventDefault();

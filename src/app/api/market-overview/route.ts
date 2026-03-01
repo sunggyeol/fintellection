@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBatchQuotes } from "@/lib/api/provider-chain";
 import { cached, TTL } from "@/lib/api/cache";
+import { getOffHoursFreezeTtlMs, isUsRegularSessionOpen } from "@/lib/market-hours";
 
 // Popular tickers to track for movers
 const TRACKED_SYMBOLS = [
@@ -32,7 +33,11 @@ interface MoverEntry {
 
 export async function GET() {
   try {
-    const data = await cached("market-overview", TTL.MARKET_OVERVIEW, async () => {
+    const ttl = isUsRegularSessionOpen()
+      ? TTL.MARKET_OVERVIEW_OPEN
+      : getOffHoursFreezeTtlMs();
+
+    const data = await cached("market-overview", ttl, async () => {
       const quotes = await getBatchQuotes(TRACKED_SYMBOLS);
 
       const entries: MoverEntry[] = [];

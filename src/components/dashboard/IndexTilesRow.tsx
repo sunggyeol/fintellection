@@ -14,8 +14,8 @@ const FALLBACK_INDICES = [
   { symbol: "^FTSE", name: "FTSE 100" },
   { symbol: "^N225", name: "Nikkei 225" },
   { symbol: "^HSI", name: "Hang Seng" },
-  { symbol: "^GDAXI", name: "DAX" },
-  { symbol: "^TNX", name: "10Y Treasury" },
+  { symbol: "^STOXX50E", name: "Euro STOXX 50" },
+  { symbol: "^DAX", name: "DAX" },
 ];
 
 interface IndexTilesRowProps {

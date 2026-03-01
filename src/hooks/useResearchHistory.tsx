@@ -11,6 +11,7 @@ import {
   actorFromAuth,
   deleteSession as deleteResearchSession,
   getRecentSessions,
+  getSession,
   saveResearchSession,
 } from "@/lib/data/unified";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +21,10 @@ import type { UIMessage } from "ai";
 interface ResearchHistoryState {
   sessions: DBResearchSession[];
   loading: boolean;
-  save: (messages: UIMessage[], title?: string) => Promise<string | undefined>;
+  currentSessionId: string | null;
+  setCurrentSessionId: (id: string | null) => void;
+  save: (messages: UIMessage[], title?: string, existingId?: string) => Promise<string | undefined>;
+  loadSession: (id: string) => Promise<{ messages: UIMessage[]; session: DBResearchSession } | null>;
   deleteSession: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -46,6 +50,7 @@ export function ResearchHistoryProvider({
   const userId = user?.id ?? null;
   const [sessions, setSessions] = useState<DBResearchSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   const getActor = useCallback(
     () => actorFromAuth(userId ? { id: userId } : null, supabase),
@@ -70,7 +75,7 @@ export function ResearchHistoryProvider({
   }, [refresh, dataVersion]);
 
   const save = useCallback(
-    async (messages: UIMessage[], title?: string) => {
+    async (messages: UIMessage[], title?: string, existingId?: string) => {
       if (messages.length === 0) return;
 
       try {
@@ -100,7 +105,7 @@ export function ResearchHistoryProvider({
         }
 
         const session: DBResearchSession = {
-          id: crypto.randomUUID(),
+          id: existingId ?? crypto.randomUUID(),
           title: sessionTitle,
           query,
           response: assistantResponse,
@@ -122,6 +127,20 @@ export function ResearchHistoryProvider({
     [refresh, getActor]
   );
 
+  const loadSession = useCallback(
+    async (id: string) => {
+      try {
+        const s = await getSession(getActor(), id);
+        if (!s) return null;
+        const parsed: UIMessage[] = JSON.parse(s.messages);
+        return { messages: parsed, session: s };
+      } catch {
+        return null;
+      }
+    },
+    [getActor]
+  );
+
   const deleteSession = useCallback(
     async (id: string) => {
       await deleteResearchSession(getActor(), id);
@@ -132,7 +151,7 @@ export function ResearchHistoryProvider({
 
   return (
     <ResearchHistoryContext
-      value={{ sessions, loading: !isReady || loading, save, deleteSession, refresh }}
+      value={{ sessions, loading: !isReady || loading, currentSessionId, setCurrentSessionId, save, loadSession, deleteSession, refresh }}
     >
       {children}
     </ResearchHistoryContext>

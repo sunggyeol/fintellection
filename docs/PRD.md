@@ -97,7 +97,7 @@ The Agentic Researcher is the core differentiator of Fintellection. It is a mult
 
 The research agent uses a **ReAct (Reasoning + Acting) pattern with a Planner-Executor hybrid**, built on Vercel AI SDK 6 and Mastra:
 
-1. **Query decomposition:** The orchestrator agent (Minimax 2.5 via Fireworks or GPT-4.1) breaks the user's question into 2–7 sub-queries based on complexity
+1. **Query decomposition:** The orchestrator agent (Gemini 3 Flash via Google Generative AI API or GPT-4.1) breaks the user's question into 2–7 sub-queries based on complexity
 2. **Parallel tool execution:** Sub-queries are executed in parallel where possible, using these tools:
    - `web_search` — Real-time web search for news, analyst commentary, press releases
    - `financial_data_api` — Structured queries to financial data providers (Finnhub, Twelve Data, FMP) for prices, fundamentals, ratios, earnings
@@ -109,7 +109,7 @@ The research agent uses a **ReAct (Reasoning + Acting) pattern with a Planner-Ex
 5. **Follow-up generation:** The system generates 3–5 recommended follow-up questions based on gap analysis
 
 **LLM configuration:**
-- **Primary model:** Minimax 2.5 via Fireworks — primary orchestration model for multi-step financial research and synthesis
+- **Primary model:** Gemini 3 Flash (`gemini-3-flash-preview`) via Google Generative AI API — primary orchestration model for multi-step financial research and synthesis
 - **Cost-optimization model:** GPT-4.1 mini ($0.40/$1.60 per 1M tokens) — for data extraction sub-tasks and formatting
 - **Embedding model:** OpenAI text-embedding-3-small ($0.02 per 1M tokens) — for RAG vector generation
 - **Estimated cost per research session:** $0.05–0.15 (10K input, 3K output tokens, 3–5 tool calls)
@@ -315,7 +315,7 @@ npm install lightweight-charts
                          │
 ┌─────────────── EXTERNAL SERVICES ───────────────────┐
 │  Financial Data: Finnhub + Twelve Data + FMP         │
-│  LLM APIs: Anthropic Claude + OpenAI GPT-4.1        │
+│  LLM APIs: Anthropic Claude + Google Gemini + OpenAI GPT-4.1 │
 │  Web Search: Built-in tool or Serper API             │
 │  SEC EDGAR: Direct REST API (free, public)           │
 │  Deployment: Vercel (Pro, $20/mo)                    │
@@ -330,7 +330,7 @@ npm install lightweight-charts
 | **Styling** | Tailwind CSS + shadcn/ui | Rapid development, dark mode support, accessible components |
 | **Charting** | TradingView Lightweight Charts (→ Advanced Charts) | Industry-standard financial charting, tiny bundle, free |
 | **AI orchestration** | Vercel AI SDK 6 + Mastra | TypeScript-native, streaming, tool calling, RAG pipeline, evals, agent memory |
-| **Primary LLM** | Minimax 2.5 (Fireworks) | Primary orchestration model for financial analysis and tool-use workflows |
+| **Primary LLM** | Gemini 3 Flash (`gemini-3-flash-preview`) | Primary orchestration model for financial analysis and tool-use workflows |
 | **Secondary LLM** | GPT-4.1 / GPT-4.1 mini (OpenAI) | Cost-efficient sub-tasks, superior structured output |
 | **Embeddings** | OpenAI text-embedding-3-small | 1536 dimensions, $0.02/1M tokens, excellent quality/cost ratio |
 | **Database** | Supabase PostgreSQL + pgvector | Single-store for relational + vector data, RLS, realtime, ACID transactions |
@@ -926,8 +926,8 @@ CREATE INDEX idx_watchlist_items_wl ON watchlist_items(watchlist_id);
 | Scenario | Model | Tokens/query | Cost/query | Queries/mo | Monthly LLM cost |
 |---|---|---|---|---|---|
 | **Simple lookup** | GPT-4.1 mini | 3K in / 1K out | ~$0.003 | — | — |
-| **Standard research** | Minimax 2.5 (Fireworks) | 10K in / 3K out | TBD (provider pricing) | — | — |
-| **Complex multi-step** | Minimax 2.5 (Fireworks) | 25K in / 5K out | TBD (provider pricing) | — | — |
+| **Standard research** | Gemini 3 Flash (`gemini-3-flash-preview`) | 10K in / 3K out | TBD (provider pricing) | — | — |
+| **Complex multi-step** | Gemini 3 Flash (`gemini-3-flash-preview`) | 25K in / 5K out | TBD (provider pricing) | — | — |
 | **Blended (MVP)** | Mixed | — | ~$0.08 avg | 2,000 | ~$160 |
 | **Blended (Growth)** | Mixed | — | ~$0.06 avg* | 20,000 | ~$1,200 |
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { use } from "react";
-import { ArrowLeft, MessageSquareText } from "lucide-react";
+import { ArrowLeft, Forward } from "lucide-react";
 import { actorFromAuth, getSession } from "@/lib/data/unified";
 import { MessageList } from "@/components/research/MessageList";
 import { useAuth } from "@/hooks/useAuth";
@@ -95,11 +95,11 @@ export default function ResearchSessionPage({
           </div>
         </div>
         <button
-          onClick={() => router.push("/research")}
+          onClick={() => router.push(`/research?session=${id}`)}
           className="flex shrink-0 items-center gap-1.5 border border-border px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-elevated sm:px-3"
         >
-          <MessageSquareText className="size-3" />
-          <span className="hidden sm:inline">New Research</span>
+          <Forward className="size-3" />
+          <span className="hidden sm:inline">Continue</span>
         </button>
       </div>
 

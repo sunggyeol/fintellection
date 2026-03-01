@@ -3,18 +3,20 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ToolCallIndicator } from "./ToolCallIndicator";
+import { MessageActions } from "./MessageActions";
 import { isTextUIPart, isToolUIPart, getToolName } from "ai";
 import type { UIMessage } from "ai";
 
 interface MessageBubbleProps {
   message: UIMessage;
+  onRetry?: (message: UIMessage) => void;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onRetry }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
-    <div className={isUser ? "flex justify-end" : "min-w-0"}>
+    <div className={isUser ? "flex justify-end" : "group min-w-0"}>
       <div
         className={
           isUser
@@ -73,6 +75,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           return null;
         })}
       </div>
+      {!isUser && <MessageActions message={message} onRetry={onRetry} />}
     </div>
   );
 }

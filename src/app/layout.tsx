@@ -39,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} overflow-x-hidden font-sans antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} fixed inset-0 overflow-hidden font-sans antialiased`}
       >
         <NuqsAdapter>
           <TooltipProvider delayDuration={300}>
